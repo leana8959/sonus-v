@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 claxon = "0.4.3"
 plotters = "0.3.4"
+raylib = "3.7.0"
 stft = { git = "https://github.com/leana8959/stft.git" }
