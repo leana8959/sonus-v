@@ -1,15 +1,18 @@
-use plotters::{
-    prelude::{BitMapBackend, ChartBuilder, Circle, IntoDrawingArea},
-    series::SurfaceSeries,
-    style::{Color, HSLColor, GREEN, WHITE},
-};
+use plotters::{prelude::*, series::SurfaceSeries};
 use stft::{WindowType, STFT};
 
 const WINDOW_SIZE: usize = 8192;
 const STEP_SIZE: usize = 4096;
 
+// const IMAGE_WIDTH: u32 = 1920;
+// const IMAGE_HEIGHT: u32 = 1080;
+const IMAGE_WIDTH: u32 = 600;
+const IMAGE_HEIGHT: u32 = 400;
+
 fn main() {
     let mut reader = claxon::FlacReader::open("audio/field_of_innocence.flac").unwrap();
+    // let mut reader = claxon::FlacReader::open("audio/blues.flac").unwrap();
+    // let mut reader = claxon::FlacReader::open("audio/sine_10mhz.flac").unwrap();
     let samples: Vec<f64> = reader
         .samples()
         .into_iter()
@@ -34,32 +37,41 @@ fn main() {
     }
     println!("{}", columns.len());
 
-    let canvas = BitMapBackend::new("image.png", (600, 400)).into_drawing_area();
+    let canvas = BitMapBackend::new("image.png", (IMAGE_WIDTH, IMAGE_HEIGHT)).into_drawing_area();
 
     canvas.fill(&WHITE).unwrap();
 
-    // for pitch in 0..10 {
+    let column_count = columns.len();
+    let column_width = columns[0].len();
+
     let mut plot_ctx = ChartBuilder::on(&canvas)
         .build_cartesian_3d(
-            0_f64..columns.len() as f64,
-            0_f64..WINDOW_SIZE as f64 * 0.75,
+            0_f64..column_count as f64,
             0_f64..100_f64,
+            0_f64..column_width as f64,
         )
         .unwrap();
+
+    plot_ctx.with_projection(|mut p| {
+        p.pitch = 0.1;
+        // p.yaw = 0.1;
+        p.into_matrix()
+    });
+
+    plot_ctx.configure_axes().draw().unwrap();
 
     plot_ctx
         .draw_series(
             SurfaceSeries::xoz(
-                (0..columns.len()).map(|x| x as f64),
-                (0..columns[0].len()).map(|y| y as f64),
-                |x, y| columns[x as usize][y as usize] as f64 * 500.0,
+                (0..column_count).map(|x| x as f64),                  // x axis
+                (0..column_width).map(|z| z as f64),                  // z axis
+                |x, z| columns[x as usize][z as usize] as f64 * 10.0, // calculate y axis given (x, z)
             )
-            .style_func(&|&v| (&HSLColor(100.0 + v, 1.0, 0.7)).mix(0.8).filled()),
+            .style_func(&|&y| HSLColor(0.07, y / 70.0, 0.7).mix(0.1).filled()),
         )
         .unwrap();
 
     println!("Done");
 
     canvas.present().unwrap();
-    // }
 }
